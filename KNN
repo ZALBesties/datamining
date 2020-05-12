@@ -1,0 +1,120 @@
+## Lec07 Code: KNN and DT
+## load package 
+# install.packages("kknn")
+# install.packages("rpart")
+# install.packages("rpart.plot")
+library(kknn)
+library(rpart)
+library(rpart.plot)
+
+
+### KNN method #####
+# iris data
+set.seed(1234)
+index<-sample(1:nrow(iris),round(0.7*nrow(iris)))
+train<-iris[index,]
+test<-iris[-index,]
+
+pre<-kknn(Species~.,train, test, distance = 2,k=5,kernel= "triangular")
+# summary(pre)
+fit <- fitted(pre)
+t<-table(test$Species, fit)
+sum(diag(t))/sum(t)#计算分类准确率
+
+#choose the right k
+iris_acc<-numeric() #Holding variable
+for(i in 1:50){
+  #Apply knn with k = i
+  predict<-kknn(Species~.,train, test, distance = 2,k=i,kernel= "triangular")
+  iris_acc<-c(iris_acc,mean(predict$fitted.values==test$Species))
+}
+#Plot k= 1 through 50
+plot(1-iris_acc,type="l",ylab="Error Rate",
+     xlab="K",main="Error Rate for Iris With Varying K")
+
+
+# optimal k = 12
+model <-kknn(Species~.,train, test, distance =2,k=12,kernel= "triangular")
+fit <- fitted(model)
+t<-table(test$Species, fit)
+sum(diag(t))/sum(t)#计算分类准确率
+
+
+#-------- practice on the bank data -------------#
+bankdata<-read.csv(file = file.choose(),header = TRUE)
+
+# Train set: 70% sample 
+train<-bankdata[,]
+test<-bankdata[,]
+pre<-kknn()
+sum(diag(t))/sum(t)#计算分类准确率
+##########
+
+############## Decision Tree ################
+data(kyphosis)
+# (1) Classification Tree example
+# grow the tree 
+fit <- rpart(Kyphosis ~ Age + Number + Start,
+             method="class", data=kyphosis)
+
+printcp(fit) # display the results 
+plotcp(fit) # visualize cross-validation results 
+summary(fit) # detailed summary of splits
+
+# plot tree 
+rpart.plot(fit,extra=106, under=TRUE, faclen=0,
+           cex=0.8, main="Decision Tree")
+
+# prediction
+result <- predict(fit,kyphosis[,-1],type="class") 
+
+# confusing matrix
+table(pred = result, true = kyphosis[,1])
+
+
+
+# prune the tree 
+# minsplit: the minimum number of observations that must exist in a node in order for a split to be attempted.
+pfit1 <- rpart(Kyphosis ~ Age + Number + Start,
+               method="class", data=kyphosis,
+               control = rpart.control(minsplit = 10)) 
+
+# plot the pruned tree 
+rpart.plot(pfit1,extra=106, under=TRUE, faclen=0,
+           cex=0.8, main="Decision Tree")
+#prediction
+result<-predict(pfit1,kyphosis[,-1],type="class")
+# confusing matrix
+table(pred = result, true = kyphosis[,1])
+
+
+# select the complexity parameter associated with minimum error
+pfit2<- prune(fit, cp= fit$cptable[which.min(fit$cptable[,"xerror"]),"CP"])
+
+
+#(2)Regression Tree example
+# grow the tree 
+data(cu.summary)
+fit <- rpart(Mileage~Price + Country + Reliability + Type, 
+             method="anova", data=cu.summary)
+
+printcp(fit) # display the results 
+plotcp(fit) # visualize cross-validation results 
+summary(fit) # detailed summary of splits
+
+# create additional plots 
+par(mfrow=c(1,2)) # two plots on one page 
+rsq.rpart(fit) # visualize cross-validation results  	
+
+# plot tree 
+rpart.plot(fit,under=TRUE, faclen=0,
+           cex=1, main="Decision Tree")
+
+# prune the tree 
+pfit<- prune(fit, cp=0.01160389) # from cptable   
+
+# plot the pruned tree 
+rpart.plot(pfit,under=TRUE, faclen=0,
+           cex=1, main="Decision Tree")
+
+###########################################################################################
